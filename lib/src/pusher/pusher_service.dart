@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:dart_pusher_channels/dart_pusher_channels.dart';
 import 'package:pipen_echo/src/extension/string_output_extension.dart';
 import 'package:pipen_echo/src/pusher/pusher_echo_options.dart';
@@ -8,13 +7,13 @@ late PusherService pusher;
 class PusherService {
   String apiUrl, accessToken, reverbKey, reverbHost;
   PusherEchoOptions echoOptions;
-  int reverbPort;
+  int? reverbPort;
 
   PusherService({
+    this.reverbPort,
     required this.apiUrl,
     required this.reverbHost,
     required this.reverbKey,
-    required this.reverbPort,
     required this.accessToken,
     required this.echoOptions,
   });
@@ -52,10 +51,11 @@ class PusherService {
   PusherChannelsClient client() => PusherChannelsClient.websocket(
     options: options(),
     connectionErrorHandler: (exception, trace, refresh) {
-      if (exception is SocketException) {
-        echoOptions.onConnectionFail?.call().output();
-        Future.delayed(echoOptions.refreshWait, () => refresh());
-      }
+      print(exception);
+      // if (exception is SocketException) {
+      echoOptions.onConnectionFail?.call().output();
+      Future.delayed(echoOptions.refreshWait, () => refresh());
+      // }
     },
   );
 }

@@ -23,7 +23,7 @@ class ChannelConnector {
       options.onConnectionEstablished?.call().output();
       _connectChannel();
     });
-    // client.pusherErrorEventStream.listen((_) {});
+    client.pusherErrorEventStream.listen((_) {});
 
     await client.connect();
   }
@@ -38,8 +38,6 @@ class ChannelConnector {
       options.onChannelConnected?.call(data.channelName).output();
     });
     channel!.onSubscriptionError().listen((data) {
-      // print(data.rootObject);
-      print(pusher.authUrl);
       options.onSubscriptionError?.call(data.channelName).output();
     });
     channel!.onAuthenticationSubscriptionFailed().listen((data) {
