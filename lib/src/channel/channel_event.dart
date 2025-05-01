@@ -14,6 +14,8 @@ class ChannelEvent {
     try {
       JsonMap json = jsonDecode(data);
       _onEvent.call(json);
-    } catch (_) {}
+    } catch (e) {
+      print(e);
+    }
   }
 }
