@@ -1,7 +1,7 @@
 import 'package:dart_pusher_channels/dart_pusher_channels.dart';
 import 'package:pipen_echo/src/channel/laravel_private_channel.dart';
 import 'package:pipen_echo/src/extension/string_output_extension.dart';
-import 'package:pipen_echo/src/pusher/pusher_echo_options.dart';
+import 'package:pipen_echo/src/options/pusher_echo_options.dart';
 import 'package:pipen_echo/src/pusher/pusher_service.dart';
 
 class ChannelConnector {
@@ -10,6 +10,7 @@ class ChannelConnector {
   PusherEchoOptions options;
   PrivateChannel? channel;
 
+  /// [Constructor]
   ChannelConnector({
     required this.client,
     required this.options,
@@ -18,9 +19,10 @@ class ChannelConnector {
 
   /// Connect to channel
   Future<void> connect() async {
-    options.onConnecting?.call().output();
+    options.onChangeState?.call(ConnectionState.connecting);
+    options.outputs?.onConnecting?.call().output();
     client.onConnectionEstablished.listen((_) {
-      options.onConnectionEstablished?.call().output();
+      options.outputs?.onConnectionEstablished?.call().output();
       _connectChannel();
     });
     client.pusherErrorEventStream.listen((_) {});
@@ -28,6 +30,7 @@ class ChannelConnector {
     await client.connect();
   }
 
+  /// Connect to pusher channel
   void _connectChannel() {
     channel = client.privateChannel(
       _channel.channelName,
@@ -35,14 +38,20 @@ class ChannelConnector {
     );
 
     channel!.whenSubscriptionSucceeded().listen((data) {
-      options.onChannelConnected?.call(data.channelName).output();
+      options.onChangeState?.call(ConnectionState.connected);
+      options.outputs?.onChannelConnected?.call(data.channelName).output();
     });
+
     channel!.onSubscriptionError().listen((data) {
-      options.onSubscriptionError?.call(data.channelName).output();
+      options.onChangeState?.call(ConnectionState.reconnecting);
+      options.outputs?.onSubscriptionError?.call(data.channelName).output();
     });
+
     channel!.onAuthenticationSubscriptionFailed().listen((data) {
-      options.onAuthenticationSubscriptionFailed?.call(data.channelName).output();
+      options.onChangeState?.call(ConnectionState.reconnecting);
+      options.outputs?.onAuthenticationSubscriptionFailed?.call(data.channelName).output();
     });
+
     channel!.subscribe();
 
     _bindEvents();
@@ -61,6 +70,7 @@ class ChannelConnector {
 
   /// Close channel
   void close() {
+    options.onChangeState?.call(ConnectionState.closed);
     client.disconnect();
     client.dispose();
   }

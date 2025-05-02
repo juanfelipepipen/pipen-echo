@@ -1,6 +1,6 @@
 import 'package:dart_pusher_channels/dart_pusher_channels.dart';
 import 'package:pipen_echo/src/extension/string_output_extension.dart';
-import 'package:pipen_echo/src/pusher/pusher_echo_options.dart';
+import 'package:pipen_echo/src/options/pusher_echo_options.dart';
 
 late PusherService pusher;
 
@@ -53,7 +53,8 @@ class PusherService {
     connectionErrorHandler: (exception, trace, refresh) {
       print(exception);
       // if (exception is SocketException) {
-      echoOptions.onConnectionFail?.call().output();
+      echoOptions.onChangeState?.call(ConnectionState.connecting);
+      echoOptions.outputs?.onConnectionFail?.call().output();
       Future.delayed(echoOptions.refreshWait, () => refresh());
       // }
     },
