@@ -1,16 +1,16 @@
 name: pipen_echo
 description: Wrapper for Laravel Echo
-version: 1.0.0
-homepage: "https://github.com/juanfelipepipen/pipen-echo"
-repository: "https://github.com/juanfelipepipen/pipen-echo"
+version: 1.0.1
+homepage: https://github.com/juanfelipepipen/pipen-echo
+repository: https://github.com/juanfelipepipen/pipen-echo
+documentation: https://echo.pipen.dev
+topics: [echo, laravel, reverb, pusher]
 
 environment:
   sdk: ^3.7.2
 
-# Add regular dependencies here.
 dependencies:
   dart_pusher_channels: ^1.2.3
-  # path: ^1.8.0
 
 dev_dependencies:
   lints: ^5.0.0

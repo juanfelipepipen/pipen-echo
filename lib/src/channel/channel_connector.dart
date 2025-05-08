@@ -19,7 +19,7 @@ class ChannelConnector {
 
   /// Connect to channel
   Future<void> connect() async {
-    options.onChangeState?.call(ConnectionState.connecting);
+    options.onChangeState?.call(ChannelConnectionState.connecting);
     options.outputs?.onConnecting?.call().output();
     client.onConnectionEstablished.listen((_) {
       options.outputs?.onConnectionEstablished?.call().output();
@@ -38,17 +38,17 @@ class ChannelConnector {
     );
 
     channel!.whenSubscriptionSucceeded().listen((data) {
-      options.onChangeState?.call(ConnectionState.connected);
+      options.onChangeState?.call(ChannelConnectionState.connected);
       options.outputs?.onChannelConnected?.call(data.channelName).output();
     });
 
     channel!.onSubscriptionError().listen((data) {
-      options.onChangeState?.call(ConnectionState.reconnecting);
+      options.onChangeState?.call(ChannelConnectionState.reconnecting);
       options.outputs?.onSubscriptionError?.call(data.channelName).output();
     });
 
     channel!.onAuthenticationSubscriptionFailed().listen((data) {
-      options.onChangeState?.call(ConnectionState.reconnecting);
+      options.onChangeState?.call(ChannelConnectionState.reconnecting);
       options.outputs?.onAuthenticationSubscriptionFailed?.call(data.channelName).output();
     });
 
@@ -70,7 +70,7 @@ class ChannelConnector {
 
   /// Close channel
   void close() {
-    options.onChangeState?.call(ConnectionState.closed);
+    options.onChangeState?.call(ChannelConnectionState.closed);
     client.disconnect();
     client.dispose();
   }

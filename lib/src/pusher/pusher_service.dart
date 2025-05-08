@@ -52,8 +52,8 @@ class PusherService {
     options: options(),
     connectionErrorHandler: (exception, trace, refresh) {
       print(exception);
+      echoOptions.onChangeState?.call(ChannelConnectionState.reconnecting);
       // if (exception is SocketException) {
-      echoOptions.onChangeState?.call(ConnectionState.connecting);
       echoOptions.outputs?.onConnectionFail?.call().output();
       Future.delayed(echoOptions.refreshWait, () => refresh());
       // }
