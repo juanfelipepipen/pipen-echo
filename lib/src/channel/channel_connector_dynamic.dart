@@ -1,9 +1,8 @@
+import 'dart:async';
+
+import 'package:collection/collection.dart';
 import 'package:dart_pusher_channels/dart_pusher_channels.dart';
-import 'package:pipen_echo/src/channel/channel_subscription.dart';
-import 'package:pipen_echo/src/channel/laravel_private_channel.dart';
-import 'package:pipen_echo/src/extension/string_output_extension.dart';
-import 'package:pipen_echo/src/options/pusher_echo_options.dart';
-import 'package:pipen_echo/src/pusher/pusher_service.dart';
+import 'package:pipen_echo/pipen_echo.dart';
 
 class ChannelConnectorDynamic {
   ChannelConnectorDynamic({required this.client, required this.options});
@@ -13,6 +12,8 @@ class ChannelConnectorDynamic {
   PrivateChannel? channel;
 
   List<PusherPrivateChannel> _channels = [];
+  Map<String, PrivateChannel> _channelConnectors = {};
+  Map<ChannelEvent, StreamSubscription<ChannelReadEvent>> _listeners = {};
 
   /// Connect to channel
   Future<void> connect() async {
@@ -24,7 +25,6 @@ class ChannelConnectorDynamic {
       print('todo ok');
       options.onChangeState?.call(.connected);
       options.outputs?.onConnectionEstablished?.call().output();
-      _connectChannel();
     });
 
     // On connection error
@@ -35,48 +35,69 @@ class ChannelConnectorDynamic {
     await client.connect();
   }
 
+  /// Subscribe to channel
   void subscribe(PusherPrivateChannel channel) {
-    _channels.add(channel);
+    final channelInConnector = _channels.firstWhereOrNull(
+      (e) => e.channelName == channel.channelName,
+    );
+
+    if (channelInConnector == null) {
+      _channels.add(channel);
+      _connectChannel(channel);
+    }
   }
 
   /// Connect to pusher channel
-  void _connectChannel() {
-    // channel = client.privateChannel(
-    //   _channel.channelName,
-    //   authorizationDelegate: pusher.authorizationDelegate,
-    // );
-    //
-    // channel!.whenSubscriptionSucceeded().listen((data) {
-    //   options.onChangeState?.call(ChannelConnectionState.connected);
-    //   options.outputs?.onChannelConnected?.call(data.channelName).output();
-    // });
-    //
-    // channel!.onSubscriptionError().listen((data) {
-    //   options.onChangeState?.call(ChannelConnectionState.reconnecting);
-    //   options.outputs?.onSubscriptionError?.call(data.channelName).output();
-    // });
-    //
-    // channel!.onAuthenticationSubscriptionFailed().listen((data) {
-    //   options.onChangeState?.call(ChannelConnectionState.reconnecting);
-    //   options.outputs?.onAuthenticationSubscriptionFailed
-    //       ?.call(data.channelName)
-    //       .output();
-    // });
-    //
-    // channel!.subscribe();
-    //
-    // _bindEvents();
+  void _connectChannel(PusherPrivateChannel channel) {
+    print('pusher|connecting');
+    final channelConnector = client.privateChannel(
+      channel.channelName,
+      authorizationDelegate: pusher.authorizationDelegate,
+    );
+
+    channelConnector.whenSubscriptionSucceeded().listen((data) {
+      options.onChangeState?.call(ChannelConnectionState.connected);
+      options.outputs?.onChannelConnected?.call(data.channelName).output();
+    });
+
+    channelConnector.onSubscriptionError().listen((data) {
+      options.onChangeState?.call(ChannelConnectionState.reconnecting);
+      options.outputs?.onSubscriptionError?.call(data.channelName).output();
+    });
+
+    channelConnector.onAuthenticationSubscriptionFailed().listen((data) {
+      options.onChangeState?.call(ChannelConnectionState.reconnecting);
+      options.outputs?.onAuthenticationSubscriptionFailed
+          ?.call(data.channelName)
+          .output();
+    });
+
+    channelConnector.subscribe();
+    _channelConnectors[channel.channelName] = channelConnector;
   }
 
   /// Bind channel events
-  void _bindEvents() {
-    // if (channel case PrivateChannel channel) {
-    //   for (final event in _channel.events) {
-    //     channel.bind(event.eventName).listen((data) {
-    //       event.onData(data.data.toString());
-    //     });
-    //   }
-    // }
+  void attach({required String channelName, required ChannelEvent event}) {
+    final channelConnector = _channelConnectors['private-' + channelName];
+
+    if (channelConnector != null) {
+      final subscriptionListener = channelConnector
+          .bind(event.eventName)
+          .listen((data) {
+            event.onData(data.data.toString());
+          });
+      _listeners[event] = subscriptionListener;
+    }
+  }
+
+  /// Unattach event listener
+  void unattach(ChannelEvent event) {
+    final exists = _listeners.keys.toList().indexOf(event) != -1;
+
+    if (exists) {
+      _listeners[event]?.cancel();
+      _listeners.remove(event);
+    }
   }
 
   /// Close channel
