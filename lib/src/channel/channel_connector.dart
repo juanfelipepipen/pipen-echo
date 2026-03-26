@@ -6,8 +6,8 @@ import 'package:pipen_echo/src/pusher/pusher_service.dart';
 
 class ChannelConnector {
   final LaravelPrivateChannel _channel;
-  PusherChannelsClient client;
-  PusherEchoOptions options;
+  final PusherChannelsClient client;
+  final PusherEchoOptions options;
   PrivateChannel? channel;
 
   /// [Constructor]
@@ -22,10 +22,13 @@ class ChannelConnector {
     options.onChangeState?.call(ChannelConnectionState.connecting);
     options.outputs?.onConnecting?.call().output();
     client.onConnectionEstablished.listen((_) {
+      options.onChangeState?.call(ChannelConnectionState.connected);
       options.outputs?.onConnectionEstablished?.call().output();
       _connectChannel();
     });
-    client.pusherErrorEventStream.listen((_) {});
+    client.pusherErrorEventStream.listen((e) {
+      print(e);
+    });
 
     await client.connect();
   }

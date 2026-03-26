@@ -8,8 +8,8 @@ class PusherEventsOutput {
     this.onSubscriptionError,
   });
 
-  String Function()? onConnectionFail, onConnectionEstablished, onConnecting;
-  String Function(String channelName)? onChannelConnected,
+  final String Function()? onConnectionFail, onConnectionEstablished, onConnecting;
+  final String Function(String channelName)? onChannelConnected,
       onAuthenticationSubscriptionFailed,
       onSubscriptionError;
 }

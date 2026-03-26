@@ -4,9 +4,14 @@ enum ChannelConnectionState { connected, connecting, reconnecting, closed }
 
 class PusherEchoOptions {
   PusherEchoOptions({Duration? refreshWait, this.outputs, this.onChangeState})
-    : refreshWait = refreshWait ?? Duration(seconds: 10);
+    : refreshWait = refreshWait ?? .new(seconds: 10);
 
-  Function(ChannelConnectionState)? onChangeState;
-  PusherEventsOutput? outputs;
-  Duration refreshWait;
+  /// Listen state changes on pusher connection
+  final Function(ChannelConnectionState)? onChangeState;
+
+  /// Custom printers for pusher connection errors/alerts
+  final PusherEventsOutput? outputs;
+
+  /// Delay time for retry connection (default 10 seconds)
+  final Duration refreshWait;
 }
