@@ -15,5 +15,5 @@ class PusherPrivateChannel {
 
   final String channelName;
 
-  List<ChannelEvent> events = [];
+  List<KChannelEvent> events = [];
 }
