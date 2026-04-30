@@ -1,9 +1,9 @@
-enum PusherScheme {
+enum WebSocketScheme {
   ws,
   wss;
 
   /// Get scheme from string
-  static PusherScheme fromString(String value) {
+  static WebSocketScheme fromString(String value) {
     return value == 'ws' ? ws : wss;
   }
 }

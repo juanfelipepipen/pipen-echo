@@ -1,12 +1,11 @@
 library;
 
-export 'src/channel/channel_connector.dart';
-export 'src/channel/channel_connector_dynamic.dart';
+export 'src/broadcast/broadcast_connection.dart';
+export 'src/broadcast/broadcast_builder.dart';
+export 'src/broadcast/broadcast_config.dart';
 export 'src/channel/channel_event.dart';
 export 'src/channel/laravel_private_channel.dart';
-export 'src/extension/channel_extension.dart';
 export 'src/extension/string_output_extension.dart';
 export 'src/options/pusher_echo_options.dart';
-export 'src/pusher/pusher_service.dart';
 export 'src/options/pusher_events_output.dart';
-export 'src/pusher/pusher_scheme.dart';
+export 'src/pusher/websocket_scheme.dart';
