@@ -2,26 +2,20 @@ import 'dart:convert';
 import 'package:pipen_echo/pipen_echo.dart';
 import 'package:pipen_echo/src/config/type_defs.dart';
 
-class ChannelEvent {
-  ChannelEvent({
-    required this._channelName,
-    required this.eventName,
-    this._onData,
-  }) : channelName = 'private-$_channelName';
+typedef ChannelEventList = List<ChannelEvent>;
 
-  final String eventName, channelName, _channelName;
+class ChannelEvent {
+  ChannelEvent({required this.eventName, this._onData});
+
+  final String eventName;
   final OnJson? _onData;
 
   ChannelEvent copy({String? channelName, String? eventName, OnJson? onData}) {
     return .new(
       eventName: eventName ?? this.eventName,
-      channelName: channelName ?? _channelName,
       onData: onData ?? _onData,
     );
   }
-
-  PusherPrivateChannel toChannel() =>
-      PusherPrivateChannel(channelName: _channelName);
 
   void onData(String data) {
     try {
@@ -31,4 +25,15 @@ class ChannelEvent {
       print(e);
     }
   }
+}
+
+/// Attach a channel event to a broadcast channel
+class ChannelEventAttach extends ChannelEvent {
+  ChannelEventAttach({
+    required super.onData,
+    required super.eventName,
+    required this.channel,
+  });
+
+  final BroadcastChannel channel;
 }

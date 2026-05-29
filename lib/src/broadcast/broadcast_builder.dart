@@ -3,13 +3,11 @@ import 'package:pipen_echo/pipen_echo.dart';
 class BroadcastBuilder {
   BroadcastBuilder._({required this._config});
 
-  final BroadcastConfig _config;
-
   factory BroadcastBuilder({
     required PusherClientEnv env,
     required PusherEchoOptions echoOptions,
   }) {
-    final authUrl = '$env.apiUrl/api/broadcasting/auth';
+    final authUrl = '${env.apiUrl}/api/broadcasting/auth';
     return BroadcastBuilder._(
       config: .new(
         env: env,
@@ -19,12 +17,14 @@ class BroadcastBuilder {
           authorizationEndpoint: .parse(authUrl),
           headers: {
             'Accept': 'application/json',
-            'Authorization': 'Bearer $env.accessToken',
+            'Authorization': 'Bearer ${env.accessToken}',
           },
         ),
       ),
     );
   }
+
+  final BroadcastConfig _config;
 
   BroadcastConnection toConnection() => .new(
     configs: _config,

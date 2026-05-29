@@ -1,3 +1,7 @@
+## 2.0.0
+
+- New broadcast attacher
+
 ## 1.0.3
 
 - Corrections

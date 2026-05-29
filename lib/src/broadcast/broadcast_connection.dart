@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'package:collection/collection.dart';
 import 'package:dart_pusher_channels/dart_pusher_channels.dart';
 import 'package:pipen_echo/pipen_echo.dart';
 
-typedef ChannelConnectors = Map<PusherPrivateChannel, PrivateChannel>;
-typedef ChannelEventListeners =
-    Map<ChannelEvent, StreamSubscription<ChannelReadEvent>>;
+typedef EventListenerStream = StreamSubscription<ChannelReadEvent>;
+typedef EventListener = ({ChannelEvent event, EventListenerStream listener});
+typedef ChannelConnectors = Map<BroadcastChannel, PrivateChannel>;
+typedef ChannelEventListeners = Map<BroadcastChannel, List<EventListener>>;
 
 class BroadcastConnection {
   BroadcastConnection({required this.client, required this.configs});
@@ -16,11 +16,8 @@ class BroadcastConnection {
   /// Pusher client configs
   final BroadcastConfig configs;
 
-  /// List of channel info for connect
-  final List<PusherPrivateChannel> _channels = [];
-
   /// Map of channel info and her current connection to pusher
-  final ChannelConnectors _channelConnectors = {};
+  final ChannelConnectors _channels = {};
 
   /// List of event listener in a channel
   final ChannelEventListeners _eventListeners = {};
@@ -48,133 +45,109 @@ class BroadcastConnection {
   }
 
   /// Subscribe to channel
-  void subscribe(PusherPrivateChannel channel) {
-    print('Subscribe to channel');
-    final channelExists =
-        _channels.firstWhereOrNull(
-          (e) => e.channelName == channel.channelName,
-        ) !=
-        null;
+  void subscribe(BroadcastChannel channel) {
+    final exists = _channels.keys.contains(channel);
 
-    if (!channelExists) {
-      _channels.add(channel);
-      _connectChannel(channel);
+    if (!exists) {
+      if (channel is BroadcastChannelPrivate) {
+        final connector = _connectPrivateChannel(channel);
+        _bindChannelEvents(channel, connector);
+      }
     }
   }
 
   /// Bind channel events
-  void attach(ChannelEvent event) {
-    PusherPrivateChannel? channel = _channels.firstWhereOrNull(
-      (e) => e.channelName == event.channelName,
-    );
-
-    if (channel == null) {
-      channel = event.toChannel();
-      subscribe(channel);
-    }
-
-    // Stop if event already exists
-    if (channel.events.contains(event)) {
-      return;
-    }
-
-    // Add event to channel
-    channel.events.add(event);
-
-    print(_channelConnectors[channel]);
-    // Bind event
-    if (_channelConnectors[channel] case PrivateChannel connector) {
-      print('Echo - Channel: ${event.channelName} | Event: ${event.eventName}');
-      final eventListener = connector.bind(event.eventName).listen((data) {
-        print(data.data);
-        event.onData(data.data.toString());
-      });
-      _eventListeners[event] = eventListener;
+  void attach(ChannelEventAttach attach) {
+    final connector = _channels[attach.channel];
+    if (connector != null) {
+      _bind(attach.channel, attach, connector);
     }
   }
 
   /// Unattach event listener
-  void unattach(ChannelEvent event) {
-    final hasListener = _eventListeners.keys.toList().contains(event);
-
-    // Remove from event listener
-    if (hasListener) {
-      _eventListeners[event]?.cancel();
-      _eventListeners.remove(event);
+  void unattach(ChannelEvent targetEvent) {
+    for (final eventListener in _eventListeners.values) {
+      eventListener.removeWhere((listener) => listener.event == targetEvent);
     }
-
-    // Remove from channel events
-    final channel = _channels.firstWhereOrNull(
-      (e) => e.channelName == event.channelName,
-    );
-
-    channel?.events.remove(event);
   }
 
   /// Connect to pusher channel
-  void _connectChannel(PusherPrivateChannel channel) {
-    final hasConnector = _channelConnectors.containsKey(channel);
-
+  PrivateChannel _connectPrivateChannel(BroadcastChannelPrivate channel) {
     print('Echo - Connecting to channel: [${channel.channelName}]');
 
-    final connector = hasConnector
-        ? _channelConnectors[channel]!
-        : client.privateChannel(
-            channel.channelName,
-            authorizationDelegate: configs.authorizationDelegate,
-          );
+    final connector = client.privateChannel(
+      channel.channelName,
+      authorizationDelegate: configs.authorizationDelegate,
+    );
 
-    if (!hasConnector) {
-      connector.whenSubscriptionSucceeded().listen((data) {
-        print('Echo - Success connection to channel: [${channel.channelName}]');
-        configs.echoOptions.onChangeState?.call(.connected);
-        configs.echoOptions.outputs?.onChannelConnected
-            ?.call(data.channelName)
-            .output();
-      });
+    connector.whenSubscriptionSucceeded().listen((data) {
+      print('Echo - Success connection to channel: [${channel.channelName}]');
+      configs.echoOptions.onChangeState?.call(.connected);
+      configs.echoOptions.outputs?.onChannelConnected
+          ?.call(data.channelName)
+          .output();
+    });
 
-      connector.onSubscriptionError().listen((data) {
-        print('Subscription channel ERROR');
-        print(data);
-        configs.echoOptions.onChangeState?.call(.reconnecting);
-        configs.echoOptions.outputs?.onSubscriptionError
-            ?.call(data.channelName)
-            .output();
-      });
+    connector.onSubscriptionError().listen((data) {
+      print('Subscription channel ERROR');
+      print(data.channelName);
+      print(data.data);
 
-      connector.onAuthenticationSubscriptionFailed().listen((data) {
-        configs.echoOptions.onChangeState?.call(.reconnecting);
-        configs.echoOptions.outputs?.onAuthenticationSubscriptionFailed
-            ?.call(data.channelName)
-            .output();
-      });
-    }
+      configs.echoOptions.onChangeState?.call(.reconnecting);
+      configs.echoOptions.outputs?.onSubscriptionError
+          ?.call(data.channelName)
+          .output();
+    });
+
+    connector.onAuthenticationSubscriptionFailed().listen((data) {
+      configs.echoOptions.onChangeState?.call(.reconnecting);
+      configs.echoOptions.outputs?.onAuthenticationSubscriptionFailed
+          ?.call(data.channelName)
+          .output();
+    });
 
     connector.subscribe();
+    _channels[channel] = connector;
+    return connector;
+  }
 
-    if (!hasConnector) {
-      _channelConnectors[channel] = connector;
+  /// Bind all channel events
+  void _bindChannelEvents(BroadcastChannel channel, PrivateChannel connector) {
+    for (final event in channel.events) {
+      _bind(channel, event, connector);
     }
+  }
+
+  /// Bind channel event listener
+  void _bind(
+    BroadcastChannel channel,
+    ChannelEvent event,
+    PrivateChannel connector,
+  ) {
+    final listener = connector.bind(event.eventName).listen((data) {
+      event.onData(data.data.toString());
+    });
+    _eventListeners[channel]?.add((event: event, listener: listener));
   }
 
   /// Check if reconnect to channels is required
   void _connectChannels() {
-    // Stop if any channel added
-    if (_channels.isEmpty) {
-      return;
-    }
-
-    // Connect to channels
-    for (final channel in _channels) {
-      _connectChannel(channel);
-    }
-
-    // Bind events
-    for (final channel in _channels) {
-      for (final event in channel.events) {
-        attach(event);
-      }
-    }
+    // // Stop if any channel added
+    // if (LL_channels.isEmpty) {
+    //   return;
+    // }
+    //
+    // // Connect to channels
+    // for (final channel in LL_channels) {
+    //   _connectPrivateChannel(channel);
+    // }
+    //
+    // // Bind events
+    // for (final channel in LL_channels) {
+    //   for (final event in channel.events) {
+    //     attach(event);
+    //   }
+    // }
   }
 
   /// Close channel

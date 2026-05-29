@@ -1,6 +1,11 @@
 import 'package:dart_pusher_channels/dart_pusher_channels.dart';
 import 'package:pipen_echo/pipen_echo.dart';
 
+typedef PrivateChannelAuthenticator =
+    EndpointAuthorizableChannelTokenAuthorizationDelegate<
+      PrivateChannelAuthorizationData
+    >;
+
 typedef PusherClientEnv = ({
   String apiUrl,
   String accessToken,
@@ -25,8 +30,5 @@ class BroadcastConfig {
   final String authUrl;
 
   /// Authorization delegation for private channels
-  final EndpointAuthorizableChannelTokenAuthorizationDelegate<
-    PrivateChannelAuthorizationData
-  >
-  authorizationDelegate;
+  final PrivateChannelAuthenticator authorizationDelegate;
 }
